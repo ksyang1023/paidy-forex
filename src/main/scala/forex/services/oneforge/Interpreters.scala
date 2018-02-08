@@ -7,7 +7,6 @@ import monix.eval.Task
 import org.atnos.eff._
 import org.atnos.eff.addon.monix.task._
 import com.softwaremill.sttp._
-import com.softwaremill.sttp.asynchttpclient.monix.AsyncHttpClientMonixBackend
 import com.softwaremill.sttp.circe._
 import forex.domain.oneforge._
 
@@ -21,17 +20,18 @@ object Interpreters {
 
   def live[R](config: OneForgeConfig)(
       implicit
-      m1: _task[R]
-  ): Algebra[Eff[R, ?]] = new CachedOneForgeService[R](config)
+      m1: _task[R],
+      sttpBackend: SttpBackend[Task, Nothing]
+  ): Algebra[Eff[R, ?]] = new CachedOneForgeService[R](config, sttpBackend)
 }
 
-class OneForgeService[R] private[oneforge] (oneForgeConfig: OneForgeConfig)(
+class OneForgeService[R] private[oneforge] (oneForgeConfig: OneForgeConfig, _sttpBackend: SttpBackend[Task, Nothing])(
     implicit
     m1: _task[R]
 ) extends Algebra[Eff[R, ?]] {
   type Result[T] = Eff[R, Error Either T]
 
-  implicit val sttpBackend = AsyncHttpClientMonixBackend()
+  implicit val sttpBackend: SttpBackend[Task, Nothing] = _sttpBackend//
 
   def quota: Result[Quota] =
     for {
@@ -66,10 +66,10 @@ class OneForgeService[R] private[oneforge] (oneForgeConfig: OneForgeConfig)(
   }
 }
 
-class CachedOneForgeService[R] private[oneforge] (oneForgeConfig: OneForgeConfig)(
+class CachedOneForgeService[R] private[oneforge] (oneForgeConfig: OneForgeConfig, _sttpBackend: SttpBackend[Task, Nothing])(
   implicit
   m1: _task[R]
-) extends OneForgeService[R](oneForgeConfig) {
+) extends OneForgeService[R](oneForgeConfig, _sttpBackend) {
   val cache: mutable.Map[Rate.Pair, Rate] = mutable.Map()
   val maxAge = oneForgeConfig.maxAge
 

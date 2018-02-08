@@ -1,5 +1,6 @@
 package forex.main
 
+import com.softwaremill.sttp.asynchttpclient.monix.AsyncHttpClientMonixBackend
 import forex.config._
 import forex.services.oneforge.OneForgeService
 import forex.{services => s}
@@ -8,6 +9,8 @@ import org.zalando.grafter.macros._
 
 @readerOf[ApplicationConfig]
 case class Processes(oneForgeConfig: OneForgeConfig) {
+
+  implicit final lazy val sttpBackend = AsyncHttpClientMonixBackend()
 
   implicit final lazy val oneForge: s.OneForge[AppEffect] =
     s.OneForge.live[AppStack](oneForgeConfig)
