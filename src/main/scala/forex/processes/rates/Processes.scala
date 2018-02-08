@@ -3,6 +3,7 @@ package forex.processes.rates
 import cats.Monad
 import cats.data.EitherT
 import forex.domain._
+import forex.domain.oneforge.Quota
 import forex.services._
 
 object Processes {
@@ -23,6 +24,15 @@ trait Processes[F[_]] {
   ): F[Error Either Rate] =
     (for {
       result ← EitherT(OneForge.get(Rate.Pair(request.from, request.to))).leftMap(toProcessError)
+    } yield result).value
+
+  def quota(
+      implicit
+      M: Monad[F],
+      OneForge: OneForge[F]
+  ): F[Error Either Quota] =
+    (for {
+      result ← EitherT(OneForge.quota).leftMap(toProcessError)
     } yield result).value
 
 }

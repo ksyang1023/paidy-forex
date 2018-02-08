@@ -2,9 +2,13 @@ package forex.domain
 
 import cats.Show
 import io.circe._
+import enumeratum._
 
-sealed trait Currency
-object Currency {
+sealed trait Currency extends EnumEntry
+
+object Currency extends Enum[Currency] {
+  val values = findValues
+
   final case object AUD extends Currency
   final case object CAD extends Currency
   final case object CHF extends Currency

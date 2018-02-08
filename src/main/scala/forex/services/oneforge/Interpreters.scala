@@ -1,18 +1,90 @@
 package forex.services.oneforge
 
-import java.time.OffsetDateTime
-
+import cats.syntax.either._
+import forex.config.OneForgeConfig
 import forex.domain._
 import monix.eval.Task
 import org.atnos.eff._
-import org.atnos.eff.all._
 import org.atnos.eff.addon.monix.task._
+import com.softwaremill.sttp._
+import com.softwaremill.sttp.asynchttpclient.monix.AsyncHttpClientMonixBackend
+import com.softwaremill.sttp.circe._
+import forex.domain.oneforge._
+
+import scala.collection.mutable
 
 object Interpreters {
   def dummy[R](
       implicit
       m1: _task[R]
   ): Algebra[Eff[R, ?]] = new Dummy[R]
+
+  def live[R](config: OneForgeConfig)(
+      implicit
+      m1: _task[R]
+  ): Algebra[Eff[R, ?]] = new CachedOneForgeService[R](config)
+}
+
+class OneForgeService[R] private[oneforge] (oneForgeConfig: OneForgeConfig)(
+    implicit
+    m1: _task[R]
+) extends Algebra[Eff[R, ?]] {
+  type Result[T] = Eff[R, Error Either T]
+
+  implicit val sttpBackend = AsyncHttpClientMonixBackend()
+
+  def quota: Result[Quota] =
+    for {
+      result ← fromTask(
+        sttp.get(uri"${oneForgeConfig.baseUri}/quota?api_key=${oneForgeConfig.apiKey}").response(asJson[Quota]).send()
+      )
+    } yield result.unsafeBody.leftMap(_ ⇒ Error.Generic)
+
+  def get(pair: Rate.Pair): Result[Rate] =
+    for {
+      rates ← getAll
+    } yield rates
+      .map(_.get(pair))
+      .flatMap(Either.fromOption[Error, Rate](_, Error.Generic))
+
+  def getAll: Result[Map[Rate.Pair, Rate]] = {
+    val pairs = for {
+      from ← Currency.upperCaseNameValuesToMap.keys
+      to ← Currency.upperCaseNameValuesToMap.keys if to != from
+    } yield from + to
+    for {
+      result ← fromTask(
+        sttp
+          .get(uri"${oneForgeConfig.baseUri}/quotes?pairs=${pairs.mkString(",")}&api_key=${oneForgeConfig.apiKey}")
+          .response(asJson[List[Quote]])
+          .send()
+      )
+    } yield
+      result.unsafeBody
+        .map(_.map(_.toRate).map(rate ⇒ rate.pair → rate).toMap)
+        .leftMap(_ ⇒ Error.Generic)
+  }
+}
+
+class CachedOneForgeService[R] private[oneforge] (oneForgeConfig: OneForgeConfig)(
+  implicit
+  m1: _task[R]
+) extends OneForgeService[R](oneForgeConfig) {
+  val cache: mutable.Map[Rate.Pair, Rate] = mutable.Map()
+  val maxAge = oneForgeConfig.maxAge
+
+  override def get(pair: Rate.Pair): Result[Rate] = cache.get(pair) match {
+    case Some(rate) if rate.age() <= maxAge => Pure(Right(rate))
+    case _ =>
+      for {
+        all <- getAll
+      } yield {
+        all.map { pairs =>
+          cache ++= pairs
+          cache(pair)
+        }
+      }
+  }
 }
 
 final class Dummy[R] private[oneforge] (
@@ -25,4 +97,6 @@ final class Dummy[R] private[oneforge] (
     for {
       result ← fromTask(Task.now(Rate(pair, Price(BigDecimal(100)), Timestamp.now)))
     } yield Right(result)
+
+  def quota: Eff[R, Either[Error, Quota]] = ???
 }
