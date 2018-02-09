@@ -2,17 +2,21 @@ package forex.interfaces.api.utils
 
 import akka.http.scaladsl._
 import forex.processes._
+import forex.processes.rates.messages.Error.InvalidRequestError
 
 object ApiExceptionHandler {
 
   def apply(): server.ExceptionHandler =
     server.ExceptionHandler {
-      case _: RatesError ⇒
+      case error: InvalidRequestError =>
+        ctx =>
+          ctx.complete(400 -> s"Invalid request parameters")
+      case error: RatesError ⇒
         ctx ⇒
-          ctx.complete("Something went wrong in the rates process")
-      case _: Throwable ⇒
+          ctx.complete(500 -> error.toString)
+      case error: Throwable ⇒
         ctx ⇒
-          ctx.complete("Something else went wrong")
+          ctx.complete(500 -> error.toString)
     }
 
 }

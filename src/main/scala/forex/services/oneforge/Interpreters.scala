@@ -31,21 +31,25 @@ class OneForgeService[R] private[oneforge] (oneForgeConfig: OneForgeConfig, _stt
 ) extends Algebra[Eff[R, ?]] {
   type Result[T] = Eff[R, Error Either T]
 
-  implicit val sttpBackend: SttpBackend[Task, Nothing] = _sttpBackend//
+  implicit val sttpBackend: SttpBackend[Task, Nothing] = _sttpBackend
 
   def quota: Result[Quota] =
     for {
       result ← fromTask(
         sttp.get(uri"${oneForgeConfig.baseUri}/quota?api_key=${oneForgeConfig.apiKey}").response(asJson[Quota]).send()
       )
-    } yield result.unsafeBody.leftMap(_ ⇒ Error.Generic)
+    } yield
+      result.body
+        .leftMap(Error.QuotasApiError)
+        .flatMap(_.leftMap(Error.JsonError))
 
   def get(pair: Rate.Pair): Result[Rate] =
     for {
       rates ← getAll
-    } yield rates
-      .map(_.get(pair))
-      .flatMap(Either.fromOption[Error, Rate](_, Error.Generic))
+    } yield
+      rates
+        .map(_.get(pair))
+        .flatMap(Either.fromOption[Error, Rate](_, Error.UnknownCurrencyPair(pair)))
 
   def getAll: Result[Map[Rate.Pair, Rate]] = {
     val pairs = for {
@@ -60,28 +64,33 @@ class OneForgeService[R] private[oneforge] (oneForgeConfig: OneForgeConfig, _stt
           .send()
       )
     } yield
-      result.unsafeBody
-        .map(_.map(_.toRate).map(rate ⇒ rate.pair → rate).toMap)
-        .leftMap(_ ⇒ Error.Generic)
+      result.body
+        .leftMap(Error.QuotesApiError)
+        .flatMap { quotes ⇒
+          quotes
+            .map(_.map(_.toRate).map(rate ⇒ rate.pair → rate).toMap)
+            .leftMap(Error.JsonError)
+        }
   }
 }
 
-class CachedOneForgeService[R] private[oneforge] (oneForgeConfig: OneForgeConfig, _sttpBackend: SttpBackend[Task, Nothing])(
-  implicit
-  m1: _task[R]
+class CachedOneForgeService[R] private[oneforge] (oneForgeConfig: OneForgeConfig,
+                                                  _sttpBackend: SttpBackend[Task, Nothing])(
+    implicit
+    m1: _task[R]
 ) extends OneForgeService[R](oneForgeConfig, _sttpBackend) {
   val cache: mutable.Map[Rate.Pair, Rate] = mutable.Map()
   val maxAge = oneForgeConfig.maxAge
 
   override def get(pair: Rate.Pair): Result[Rate] = cache.get(pair) match {
-    case Some(rate) if rate.age() <= maxAge => Pure(Right(rate))
-    case _ =>
+    case Some(rate) if rate.age() <= maxAge ⇒ Pure(Right(rate))
+    case _ ⇒
       for {
-        all <- getAll
+        all ← getAll
       } yield {
-        all.map { pairs =>
+        all.flatMap { pairs ⇒
           cache ++= pairs
-          cache(pair)
+          Either.fromOption(cache.get(pair), Error.UnknownCurrencyPair(pair))
         }
       }
   }
