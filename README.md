@@ -3,10 +3,9 @@
 Table of Contents
 =================
 
-* [Paidy Forex](#paidy-forex)
-  * [Overview](#overview)
-  * [What's missing/left to do?](#whats-missingleft-to-do)
-  * [Running](#running)
+* [Overview](#overview)
+* [What's missing/left to do?](#whats-missingleft-to-do)
+* [Running](#running)
 
 
 ## Overview
