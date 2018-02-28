@@ -6,8 +6,7 @@ package object converters {
   import messages._
 
   def toProcessError[T <: Throwable](t: T): Error = t match {
-    case e: OneForgeError.QuotasApiError      ⇒ Error.ExternalApiError(e)
-    case e: OneForgeError.QuotesApiError      ⇒ Error.ExternalApiError(e)
+    case e: OneForgeError.ApiError            ⇒ Error.ExternalApiError(e)
     case e: OneForgeError.UnknownCurrencyPair ⇒ Error.InvalidRequestError(e)
     case OneForgeError.Generic                ⇒ Error.Generic
     case OneForgeError.System(err)            ⇒ Error.System(err)

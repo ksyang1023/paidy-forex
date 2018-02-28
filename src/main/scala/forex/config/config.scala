@@ -29,7 +29,11 @@ case class ExecutorsConfig(
 )
 
 case class OneForgeConfig(
+  maxAge: Duration,
+  client: OneForgeClientConfig
+)
+
+case class OneForgeClientConfig(
   baseUri: URI,
-  apiKey: String,
-  maxAge: Duration
+  apiKey: String
 )
