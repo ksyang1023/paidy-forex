@@ -21,6 +21,7 @@ object Protocol {
   )
 
   object GetApiResponse {
+    implicit val decoder: Decoder[GetApiResponse] = deriveDecoder[GetApiResponse]
     implicit val encoder: Encoder[GetApiResponse] = deriveEncoder[GetApiResponse]
   }
 

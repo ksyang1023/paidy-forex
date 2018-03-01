@@ -1,6 +1,7 @@
 package forex.domain
 
 import cats.Show
+import cats.syntax.either._
 import io.circe._
 import enumeratum._
 
@@ -45,5 +46,8 @@ object Currency extends Enum[Currency] {
 
   implicit val encoder: Encoder[Currency] =
     Encoder.instance[Currency] { show.show _ andThen Json.fromString }
+
+  implicit val decoder: Decoder[Currency] =
+    Decoder.decodeString.emap(str => Either.fromOption(Currency.withNameOption(str), s"Invalid currency '$str'"))
 
 }

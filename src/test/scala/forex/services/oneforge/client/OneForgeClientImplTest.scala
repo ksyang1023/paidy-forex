@@ -11,15 +11,15 @@ import org.scalatest.{EitherValues, FreeSpec, Matchers}
 
 import scala.concurrent.TimeoutException
 
-class OneForgeClientImplTest extends FreeSpec with Matchers with EitherValues {
+class OneForgeClientImplTest[F[_]] extends FreeSpec with Matchers with EitherValues {
 
   // fixtures
   val baseUri = "https://1forge.local/1.0.0"
   val apiKey = "apiKey1"
   val clientConfig = OneForgeClientConfig(new URI(baseUri), apiKey)
 
-  "OneForgeClientImpl" - {
-    "for quotes" - {
+  classOf[OneForgeClientImpl[F]].getSimpleName - {
+    "for /quotes" - {
       "should retrieve quotes for currency pairs" in {
         val pairs = Seq(
           oneforge.Pair("FROM1", "TO1"),
@@ -83,7 +83,7 @@ class OneForgeClientImplTest extends FreeSpec with Matchers with EitherValues {
       }
     }
 
-    "for quotas" - {
+    "for /quota" - {
       "should retrieve the current API quotas" in {
         val expResult = oneforge.Quota(10, 1000, 990, 10)
 

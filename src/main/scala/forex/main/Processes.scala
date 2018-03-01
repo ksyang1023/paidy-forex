@@ -10,8 +10,17 @@ import forex.{ processes ⇒ p }
 import monix.eval.Task
 import org.zalando.grafter.macros._
 
-@readerOf[ApplicationConfig]
-case class Processes(oneForgeConfig: OneForgeConfig) {
+@defaultReader[ProcessesInstance]
+trait Processes {
+  implicit val oneForgeConfig: OneForgeConfig
+  implicit val sttpBackend: SttpBackend[Task, Nothing]
+  implicit val oneForgeClient: OneForgeClient[Task]
+  implicit val oneForge: s.OneForge[AppEffect]
+  implicit val Rates: p.Rates[AppEffect] = p.Rates[AppEffect]
+}
+
+@reader
+case class ProcessesInstance(oneForgeConfig: OneForgeConfig) extends Processes {
 
   implicit final lazy val sttpBackend: SttpBackend[Task, Nothing] = AsyncHttpClientMonixBackend()
 
@@ -19,7 +28,5 @@ case class Processes(oneForgeConfig: OneForgeConfig) {
 
   implicit final lazy val oneForge: s.OneForge[AppEffect] =
     s.OneForge.live[AppStack](oneForgeConfig)
-
-  final val Rates = p.Rates[AppEffect]
 
 }

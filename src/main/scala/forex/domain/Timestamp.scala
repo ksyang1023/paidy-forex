@@ -14,4 +14,6 @@ object Timestamp {
 
   implicit val encoder: Encoder[Timestamp] =
     deriveUnwrappedEncoder[Timestamp]
+  implicit val decoder: Decoder[Timestamp] =
+    deriveUnwrappedDecoder[Timestamp]
 }
