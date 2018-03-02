@@ -21,12 +21,21 @@ I've also introduced [enumeratum](https://github.com/lloydmeta/enumeratum) which
 
 Finally, I've also extended the `Error`] types ([here](https://github.com/thenobody/paidy-forex/blob/master/src/main/scala/forex/services/oneforge/Error.scala) and [here](https://github.com/thenobody/paidy-forex/blob/master/src/main/scala/forex/processes/rates/messages.scala)) to account for more specific error cases and failures. These also translate into more specific HTTP error codes 
 
-## What's missing/left to do?
-First and foremost, tests (both unit and integration). For the sake of time I haven't ventured into setting up the entire testing environment but I would implement those using the scalatest + scalacheck combo. If interested, feel free to check out my other projects using it (such as [here](https://github.com/thenobody/clearscore-creditcards/blob/master/credit-cards-service/src/test/scala/net/thenobody/clearscore/creditcards/service/route/RootRouteTest.scala)).
-
-Additionally, the structure of the interpreter code (such as get and getAll) could use some refactoring into a bit more reusable code (would be useful for example when unit testing).
-
 ## Running
 The service can be started with the default configuration [reference.conf](https://github.com/thenobody/paidy-forex/blob/master/src/main/resources/reference.conf#L12-L16) (with 2-minute cache refresh interval) by:
 
 	sbt run
+
+## Testing
+The test suite can be run by a standard
+
+	sbt test
+	
+This executes tests for:
+
+* 1forge client ([OneForgeClientImplTest](https://github.com/thenobody/paidy-forex/blob/master/src/test/scala/forex/services/oneforge/client/OneForgeClientImplTest.scala))
+* JSON schema validation for 1forge API responses ([QuotaTest](https://github.com/thenobody/paidy-forex/blob/master/src/test/scala/forex/domain/oneforge/QuotaTest.scala) and [QuoteTest](https://github.com/thenobody/paidy-forex/blob/master/src/test/scala/forex/domain/oneforge/QuoteTest.scala))
+* 1forge service classes ([OneForgeServiceTest](https://github.com/thenobody/paidy-forex/blob/master/src/test/scala/forex/services/oneforge/OneForgeServiceTest.scala) and [CachedOneForgeServiceTest](https://github.com/thenobody/paidy-forex/blob/master/src/test/scala/forex/services/oneforge/CachedOneForgeServiceTest.scala))
+* the API routes ([RoutesTest](https://github.com/thenobody/paidy-forex/blob/master/src/test/scala/forex/interfaces/api/RoutesTest.scala))
+
+The unit tests are implemented using [Scalatest](http://www.scalatest.org/) with property-based tests using [Scalacheck](https://www.scalacheck.org/) (as defined in [ModelFactory](https://github.com/thenobody/paidy-forex/blob/master/src/test/scala/forex/ModelFactory.scala)).
