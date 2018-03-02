@@ -6,6 +6,7 @@ Table of Contents
 * [Overview](#overview)
 * [What's missing/left to do?](#whats-missingleft-to-do)
 * [Running](#running)
+* [Testing](#testing)
 
 
 ## Overview
