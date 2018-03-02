@@ -75,6 +75,6 @@ class RoutesTest extends FreeSpec with Matchers with ScalatestRouteTest with Pro
     implicit val sttpBackend: SttpBackend[Task, Nothing] = _sttpBackend
     implicit val oneForgeClient: OneForgeClient[Task] =
       new OneForgeClientImpl[Task](OneForgeClientConfig(new URI("https://bogus.local"), "apiKey1"))
-    implicit val oneForge: OneForge[AppEffect] = OneForge.live(oneForgeConfig)
+    implicit val oneForge: OneForge[AppEffect] = OneForge.simple(oneForgeConfig)
   }
 }
