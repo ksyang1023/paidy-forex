@@ -1,13 +1,14 @@
 package forex.services.oneforge
 
 import forex.ModelFactory
-import forex.domain.{ oneforge, Rate }
+import forex.domain
+import forex.domain.oneforge
 import forex.main.AppStack
 import forex.services.oneforge.Error.{ ApiError, UnsupportedCurrencyPair }
 import forex.services.oneforge.client.OneForgeClient
 import monix.eval.Task
 import org.atnos.eff.EffInterpretation
-import org.scalatest.prop.PropertyChecks
+import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest._
 import monix.cats._
 import monix.execution.Scheduler.Implicits.global
@@ -16,7 +17,7 @@ import org.scalatest.concurrent.ScalaFutures
 class OneForgeServiceTest[F]
     extends FlatSpec
     with Matchers
-    with PropertyChecks
+    with GeneratorDrivenPropertyChecks
     with OptionValues
     with EitherValues
     with ModelFactory
@@ -27,10 +28,10 @@ class OneForgeServiceTest[F]
   it should "retrieve a quote for a specified currency pair" in {
     forAll(aCurrency, aCurrency, aPrice, aTimestamp) {
       case (from, to, price, timestamp) ⇒
-        val pair = Rate.Pair(from, to)
+        val pair = domain.Rate.Pair(from, to)
         val quote =
           oneforge.Quote(pair.toApiPair.render, price.value, price.value, price.value, timestamp.value.toEpochSecond)
-        val expResult = Rate(pair, price, timestamp)
+        val expResult = domain.Rate(pair, price, timestamp)
 
         val client = new OneForgeClient[Task] {
           def quotes(pairs: List[oneforge.Pair]): Result[List[oneforge.Quote]] =
@@ -76,7 +77,7 @@ class OneForgeServiceTest[F]
   it should "handle unsupported currency requests" in {
     forAll(aCurrency, aCurrency) {
       case (from, to) ⇒
-        val pair = Rate.Pair(from, to)
+        val pair = domain.Rate.Pair(from, to)
 
         val client = new OneForgeClient[Task] {
           def quotes(pairs: List[oneforge.Pair]): Result[List[oneforge.Quote]] =
@@ -99,7 +100,7 @@ class OneForgeServiceTest[F]
   it should "handle external service errors" in {
     forAll(aCurrency, aCurrency) {
       case (from, to) ⇒
-        val pair = Rate.Pair(from, to)
+        val pair = domain.Rate.Pair(from, to)
 
         val client = new OneForgeClient[Task] {
           def quotes(pairs: List[oneforge.Pair]): Result[List[oneforge.Quote]] =

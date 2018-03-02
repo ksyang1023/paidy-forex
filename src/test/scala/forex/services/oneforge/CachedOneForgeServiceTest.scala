@@ -1,10 +1,9 @@
 package forex.services.oneforge
 
-import java.time.OffsetDateTime
-
 import forex.ModelFactory
 import forex.config.OneForgeConfig
-import forex.domain.{Rate, Timestamp, oneforge}
+import forex.domain
+import forex.domain.oneforge
 import forex.main.AppStack
 import forex.services.oneforge.Error.ApiError
 import forex.services.oneforge.client.OneForgeClient
@@ -13,16 +12,16 @@ import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 import org.atnos.eff.EffInterpretation
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.prop.PropertyChecks
+import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest.time._
-import org.scalatest.{EitherValues, FlatSpec, Matchers}
+import org.scalatest.{ EitherValues, FlatSpec, Matchers }
 
 import scala.concurrent.duration._
 
 class CachedOneForgeServiceTest[F]
     extends FlatSpec
     with Matchers
-    with PropertyChecks
+    with GeneratorDrivenPropertyChecks
     with ModelFactory
     with EitherValues
     with ScalaFutures {
@@ -35,8 +34,8 @@ class CachedOneForgeServiceTest[F]
   it should "read data from cache after populating" in {
     forAll(aCurrency, aCurrency, aPrice, aTimestamp) {
       case (from, to, price, timestamp) ⇒
-        val pair = Rate.Pair(from, to)
-        val expResult = Rate(pair, price, timestamp)
+        val pair = domain.Rate.Pair(from, to)
+        val expResult = domain.Rate(pair, price, timestamp)
         val quote =
           oneforge.Quote(pair.toApiPair.render, price.value, price.value, price.value, timestamp.value.toEpochSecond)
 
@@ -58,13 +57,13 @@ class CachedOneForgeServiceTest[F]
   it should "repopulate cache after a specified TTL elapses" in {
     forAll(aCurrency, aCurrency, aPrice, aTimestamp) {
       case (from, to, price, timestamp) ⇒
-        val pair = Rate.Pair(from, to)
+        val pair = domain.Rate.Pair(from, to)
         val quote1 =
           oneforge.Quote(pair.toApiPair.render, price.value, price.value, price.value, timestamp.value.toEpochSecond)
         val quote2 = quote1.copy(price = price.value * 10, timestamp = timestamp.value.toEpochSecond + 2)
 
-        val expResult1 = Rate(pair, price, timestamp)
-        val expResult2 = Rate(pair, price.copy(price.value * 10), timestamp.copy(timestamp.value.plusSeconds(2)))
+        val expResult1 = domain.Rate(pair, price, timestamp)
+        val expResult2 = domain.Rate(pair, price.copy(price.value * 10), timestamp.copy(timestamp.value.plusSeconds(2)))
 
         val client = statefulClient(Right(List(quote1)), Right(List(quote2)))
 

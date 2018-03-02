@@ -4,14 +4,22 @@ import java.net.URI
 
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.testing._
+import forex.ModelFactory
 import forex.config.OneForgeClientConfig
 import forex.domain.oneforge
 import forex.services.oneforge.Error
-import org.scalatest.{EitherValues, FreeSpec, Matchers}
+import org.scalacheck.Gen
+import org.scalatest.prop.GeneratorDrivenPropertyChecks
+import org.scalatest.{ EitherValues, FreeSpec, Matchers }
 
 import scala.concurrent.TimeoutException
 
-class OneForgeClientImplTest[F[_]] extends FreeSpec with Matchers with EitherValues {
+class OneForgeClientImplTest[F[_]]
+    extends FreeSpec
+    with Matchers
+    with EitherValues
+    with GeneratorDrivenPropertyChecks
+    with ModelFactory {
 
   // fixtures
   val baseUri = "https://1forge.local/1.0.0"
@@ -21,26 +29,21 @@ class OneForgeClientImplTest[F[_]] extends FreeSpec with Matchers with EitherVal
   classOf[OneForgeClientImpl[F]].getSimpleName - {
     "for /quotes" - {
       "should retrieve quotes for currency pairs" in {
-        val pairs = Seq(
-          oneforge.Pair("FROM1", "TO1"),
-          oneforge.Pair("FROM2", "TO2"),
-          oneforge.Pair("FROM3", "TO3"),
-        )
+        forAll(Gen.listOf(aOneForgePair), aBigDecimal, aBigDecimal, aBigDecimal, aTimestamp) {
+          case (pairs, price, bid, ask, timestamp) ⇒
+            val pairsString = pairs.map(_.render).mkString(",")
 
-        val pairsString = pairs.map(_.render).mkString(",")
+            val expResult = pairs.map { pair ⇒
+              oneforge.Quote(pair.render, price, bid, ask, timestamp.value.toEpochSecond)
+            }
 
-        val expResult = List(
-          oneforge.Quote("FROM1TO1", 1.1, 2.1, 3.1, 124567891L),
-          oneforge.Quote("FROM2TO2", 1.2, 2.2, 3.2, 124567892L),
-          oneforge.Quote("FROM3TO3", 1.3, 2.3, 3.3, 124567893L),
-        )
+            implicit val _sttpBackend = SttpBackendStub(HttpURLConnectionBackend())
+              .whenRequestMatches(_.uri == uri"$baseUri/quotes?pairs=$pairsString&api_key=$apiKey")
+              .thenRespond(Right(expResult))
+            val instance = new OneForgeClientImpl[Id](clientConfig)
 
-        implicit val _sttpBackend = SttpBackendStub(HttpURLConnectionBackend())
-          .whenRequestMatches(_.uri == uri"$baseUri/quotes?pairs=$pairsString&api_key=$apiKey")
-          .thenRespond(Right(expResult))
-        val instance = new OneForgeClientImpl[Id](clientConfig)
-
-        instance.quotes(pairs:_*).right.value shouldEqual expResult
+            instance.quotes(pairs: _*).right.value shouldEqual expResult
+        }
       }
 
       "should handle JSON parsing errors" in {
@@ -85,14 +88,16 @@ class OneForgeClientImplTest[F[_]] extends FreeSpec with Matchers with EitherVal
 
     "for /quota" - {
       "should retrieve the current API quotas" in {
-        val expResult = oneforge.Quota(10, 1000, 990, 10)
+        forAll(aOneForgeQuota) { quota ⇒
+          val expResult = quota
 
-        implicit val _sttpBackend = SttpBackendStub(HttpURLConnectionBackend())
-          .whenRequestMatches(_.uri == uri"$baseUri/quota?api_key=$apiKey")
-          .thenRespond(Right(expResult))
-        val instance = new OneForgeClientImpl[Id](clientConfig)
+          implicit val _sttpBackend = SttpBackendStub(HttpURLConnectionBackend())
+            .whenRequestMatches(_.uri == uri"$baseUri/quota?api_key=$apiKey")
+            .thenRespond(Right(expResult))
+          val instance = new OneForgeClientImpl[Id](clientConfig)
 
-        instance.quota.right.value shouldEqual expResult
+          instance.quota.right.value shouldEqual expResult
+        }
       }
 
       "should handle JSON parsing errors" in {

@@ -17,10 +17,15 @@ import forex.services.OneForge
 import forex.services.oneforge.client.{ OneForgeClient, OneForgeClientImpl }
 import monix.cats._
 import monix.eval.Task
-import org.scalatest.prop.PropertyChecks
+import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest.{ FreeSpec, Matchers }
 
-class RoutesTest extends FreeSpec with Matchers with ScalatestRouteTest with PropertyChecks with ModelFactory {
+class RoutesTest
+    extends FreeSpec
+    with Matchers
+    with ScalatestRouteTest
+    with GeneratorDrivenPropertyChecks
+    with ModelFactory {
 
   "Routes" - {
     "/" - {
