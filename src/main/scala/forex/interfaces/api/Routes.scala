@@ -1,9 +1,10 @@
 package forex.interfaces.api
 
+import akka.event.Logging
 import akka.http.scaladsl._
 import forex.config._
+import forex.interfaces.api.utils._
 import org.zalando.grafter.macros._
-import utils._
 
 @readerOf[ApplicationConfig]
 case class Routes(
@@ -12,9 +13,11 @@ case class Routes(
   import server.Directives._
 
   lazy val route: server.Route =
-    handleExceptions(ApiExceptionHandler()) {
-      handleRejections(ApiRejectionHandler()) {
-        ratesRoutes.route
+    logRequestResult("Rates Service", Logging.InfoLevel) {
+      handleExceptions(ApiExceptionHandler()) {
+        handleRejections(ApiRejectionHandler()) {
+          ratesRoutes.route
+        }
       }
     }
 }

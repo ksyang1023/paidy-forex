@@ -9,7 +9,7 @@ import forex.config.OneForgeClientConfig
 import forex.domain.oneforge._
 import forex.services.oneforge.Error
 
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 trait OneForgeClient[F[_]] {
   type Result[R] = F[Error Either R]
