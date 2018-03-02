@@ -10,7 +10,7 @@ Table of Contents
 
 
 ## Overview
-The basic idea behind the implementation is to cache the exchange rates pulled from 1Forge API in memory. These rates are kept for a given amount of time and new exchange ratest are pulled only after it passes. This mechanism allows for keeping the total amount of requests not going over the daily quota (implemented [here](https://github.com/thenobody/paidy-forex/blob/master/src/main/scala/forex/services/oneforge/Interpreters.scala#L77-L97)). At the same time, it also improves the response latency of our service.
+The basic idea behind the implementation is to cache the exchange rates pulled from 1Forge API in memory. These rates are kept for a given amount of time and new exchange ratest are pulled only after it passes. This mechanism allows for keeping the total amount of requests not going over the daily quota (implemented [here](https://github.com/thenobody/paidy-forex/blob/master/src/main/scala/forex/services/oneforge/Interpreters.scala#L58-L76)). At the same time, it also improves the response latency of our service.
 
 The downside is that the exchange rates can (and probably will) diverge from the cached values while they are being kept in memory. As such, this is not ideal for use cases where high temporal precision is required. The proper way how to solve such a problem would obviously be to upgrade the 1Forge plan. 
 
@@ -26,6 +26,20 @@ Finally, I've also extended the `Error`] types ([here](https://github.com/thenob
 The service can be started with the default configuration [reference.conf](https://github.com/thenobody/paidy-forex/blob/master/src/main/resources/reference.conf#L12-L16) (with 2-minute cache refresh interval) by:
 
 	sbt run
+	
+## Configuration
+To change the TTL before repopulating the cache modify the `oneforge.max-age` property to the desired `FiniteDuration`, e.g.
+
+```
+app {
+  ...
+  one-forge {
+    max-age = 2 minutes // free tier limits to 1000 a day, which translates to up to one request per 1.44 minutes
+  	...
+  }
+  ...
+}
+```
 
 ## Testing
 The test suite can be run by a standard
